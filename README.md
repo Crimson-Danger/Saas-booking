@@ -51,6 +51,14 @@ Sistema de Agendamento Online SaaS para profissionais (salões, clínicas, aulas
 - Configure variáveis de ambiente: `DATABASE_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`.
 - Rode migrações via `pnpm dlx prisma migrate deploy` (ou console Prisma Data Platform) e aplique `prisma/rls/enable_rls.sql` no banco.
 
+### Preview automático (GitHub Actions)
+- Adicione Secrets no repositório (Settings → Secrets and variables → Actions):
+  - `VERCEL_TOKEN` (Token da conta em Vercel → Account Settings → Tokens)
+  - `VERCEL_ORG_ID` e `VERCEL_PROJECT_ID` (em Project Settings → General, ou rode `npx vercel link` localmente e leia `.vercel/project.json`)
+- Workflow: `.github/workflows/vercel-preview.yml`
+  - `pull_request` para main → cria Preview no Vercel e comenta no PR
+  - `push` na main → deploy de produção (`--prod`)
+
 ## Observações
 - MVP prioriza fluxo principal. Sugeridos próximos passos:
   - Edição/remoção de disponibilidade, visualização de agenda semanal, configurações de marca/fuso via endpoint dedicado.
