@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  name         String?
+  passwordHash String
+  memberships  Membership[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Tenant {
+  id           String        @id @default(uuid())
+  name         String
+  slug         String        @unique
+  timezone     String        @default("UTC")
+  brandName    String?
+  brandLogoUrl String?
+  primaryColor String? 
+  memberships  Membership[]
+  services     Service[]
+  availability Availability[]
+  timeOffs     TimeOff[]
+  customers    Customer[]
+  appointments Appointment[]
+  notifications Notification[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  STAFF
+}
+
+model Membership {
+  id       String @id @default(uuid())
+  userId   String
+  tenantId String
+  role     Role   @default(STAFF)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+}
+
+model Service {
+  id              String   @id @default(uuid())
+  tenantId        String
+  name            String
+  durationMinutes Int
+  priceCents      Int?
+  active          Boolean  @default(true)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@index([tenantId])
+}
+
+model Availability {
+  id        String @id @default(uuid())
+  tenantId  String
+  dayOfWeek Int
+  startTime String // "HH:mm"
+  endTime   String // "HH:mm"
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, dayOfWeek])
+}
+
+model TimeOff {
+  id        String   @id @default(uuid())
+  tenantId  String
+  start     DateTime
+  end       DateTime
+  reason    String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, start, end])
+}
+
+model Customer {
+  id        String @id @default(uuid())
+  tenantId  String
+  name      String
+  email     String
+  phone     String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@index([tenantId])
+  @@unique([tenantId, email])
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+model Appointment {
+  id          String            @id @default(uuid())
+  tenantId    String
+  serviceId   String
+  customerId  String
+  start       DateTime
+  end         DateTime
+  status      AppointmentStatus @default(SCHEDULED)
+  notes       String?
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  service  Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  notifications Notification[]
+
+  @@index([tenantId])
+  @@index([tenantId, start])
+}
+
+enum NotificationType {
+  EMAIL
+  WEBHOOK
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+model Notification {
+  id            String             @id @default(uuid())
+  tenantId      String
+  appointmentId String?
+  type          NotificationType
+  toEmail       String?
+  subject       String?
+  body          String?
+  status        NotificationStatus @default(QUEUED)
+  error         String?
+  createdAt     DateTime           @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+}
